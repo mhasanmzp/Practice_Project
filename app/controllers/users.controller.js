@@ -2,6 +2,9 @@ const express = require("express");
 const apiRoutes = express.Router();
 const bcrypt = require("bcrypt");
 const User = require("../models/user.model");
+const upload = require("../middleware/uploadMiddleware")
+const multer = require("multer")
+const path = require("path")
 const jwt = require("jsonwebtoken");
 const secretKey = "#Roadsterlife";
 module.exports = function (app) {
@@ -92,6 +95,61 @@ module.exports = function (app) {
       res.status(500).json({ message: "Something went wrong: " + err.message });
     }
   });
+
+  apiRoutes.post("/upload-profile", upload.single("profilePic"), async (req, res) => {
+    try {
+      const { userId } = req.body;
+  
+      if (!userId) {
+        return res.status(400).json({ message: "UserId is required!" });
+      }
+  
+      if (!req.file) {
+        return res.status(400).json({ message: "Profile picture is required!" });
+      }
+  
+      const imagePath = req.file.filename; 
+  
+      const user = await User.findOneAndUpdate(
+        { userId },
+        { profilePicture: `/uploads/${imagePath}` },
+        { new: true }
+      ).select("name email profilePicture");
+  
+      if (!user) {
+        return res.status(404).json({ message: "User not found!" });
+      }
+  
+      res.status(200).json({
+        message: "Profile picture uploaded successfully!",
+        user,
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Upload failed: " + err.message });
+    }
+  });
+
+  apiRoutes.post("/upload", upload.single("profilePicture"), async(req, res) => {
+
+    const userId = req.body.userId;
+
+    if(!userId){
+      return res.status(400).json({message: "UserId is required"})
+    }
+
+    if(!profilePic){
+      return res.status(400).json({message: "Profile Picture is required"})
+    }
+
+    const data = User.findOneAndUpdate(
+      {userId},
+      {profilePic: profilePicture},
+      {new : true}
+    ).select("name email profilePic")
+
+    res.status(200).json(data)
+
+  })
 
   app.use("/", apiRoutes);
 };
